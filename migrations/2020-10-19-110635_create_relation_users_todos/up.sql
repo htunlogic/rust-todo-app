@@ -1,0 +1,1 @@
+ALTER TABLE public.todos ADD CONSTRAINT fk_todos_users FOREIGN KEY ( user_id ) REFERENCES public.users( id ) ON DELETE CASCADE;
