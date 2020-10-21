@@ -10,3 +10,6 @@ diesel = { version = "1.4.4", features = ["postgres"] }
 dotenv = "0.15.0"
 uuid = "*"
 bcrypt = "*"
+actix-web = "*"
+serde = "*"
+derive_more = "*"

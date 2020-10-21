@@ -9,6 +9,7 @@ use crate::virtual_schema::users_todos;
 use bcrypt;
 use diesel::result;
 use diesel::sql_query;
+use serde::ser::SerializeStruct;
 use std::{error::Error, fmt};
 
 /// Main user model that will be used for interaction with users
@@ -19,6 +20,18 @@ pub struct User {
   pub id: String,
   pub email: String,
   password: String,
+}
+
+impl serde::Serialize for User {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: serde::Serializer,
+  {
+    let mut s = serializer.serialize_struct("User", 3)?;
+    s.serialize_field("id", &self.id)?;
+    s.serialize_field("email", &self.email)?;
+    s.end()
+  }
 }
 
 impl User {
@@ -50,7 +63,7 @@ impl User {
 pub struct UserWithTodo {
   pub id: String,
   pub email: String,
-  todos: Vec<models::todo::Todo>,
+  pub todos: Vec<models::todo::Todo>,
 }
 
 /// Temporary struct for incoming data from the join sql query
@@ -99,21 +112,20 @@ pub struct AuthenticationError;
 
 impl Error for AuthenticationError {
   fn description(&self) -> &str {
-    "Unathorized"
+    "Unauthorized"
   }
 }
 
 impl fmt::Display for AuthenticationError {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "Unathorized")
+    write!(f, "Unauthorized")
   }
 }
 
-#[derive(Queryable, PartialEq, Debug)]
+#[derive(Queryable, PartialEq, Debug, serde::Deserialize)]
 pub struct AuthenticableUser {
-  pub id: String,
   pub email: String,
-  password: String,
+  pub password: String,
 }
 
 impl AuthenticableUser {
@@ -140,11 +152,18 @@ impl AuthenticableUser {
     };
 
     match bcrypt::verify(&password, &user.password) {
-      Ok(_) => Ok(user),
+      Ok(res) => {
+        if res == true {
+          Ok(user)
+        } else {
+          println!("Authentication: bcrypt verify error for: {}", &user.email);
+          Err(AuthenticationError)
+        }
+      }
       Err(e) => {
         println!(
-          "Authentication: provided password does not match for user: {}",
-          &user.email
+          "Authentication: bcrypt verify error: {}, for: {}",
+          e, &user.email
         );
         Err(AuthenticationError)
       }
@@ -154,7 +173,7 @@ impl AuthenticableUser {
 
 /// Struct for attributes required to create new user
 /// new user can be created using this struct method create.
-#[derive(Queryable, Insertable, Debug)]
+#[derive(Queryable, Insertable, Debug, serde::Deserialize)]
 #[table_name = "users"]
 pub struct NewUser {
   pub email: String,
