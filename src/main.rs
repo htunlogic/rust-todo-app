@@ -8,6 +8,7 @@ extern crate dotenv;
 mod db;
 mod models;
 mod schema;
+mod virtual_schema;
 
 fn main() {
     let email = "banana@man.com";
@@ -39,8 +40,12 @@ fn main() {
 
     println!("created a new todo: {:#?}", todo);
 
+    todo.check().unwrap_or_else(|err| {
+        panic!("Problem marking todo as checked: {}", err);
+    });
+
     let todo_content = "Something random2";
-    let todo = got_user.add_todo(&todo_content).unwrap_or_else(|err| {
+    got_user.add_todo(&todo_content).unwrap_or_else(|err| {
         panic!("Problem creating a todo: {}", err);
     });
 

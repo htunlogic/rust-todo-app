@@ -27,7 +27,7 @@ impl Todo {
   }
 
   // Check the todo as done
-  pub fn check(&mut self) -> Result<bool, result::Error> {
+  pub fn check(&self) -> Result<bool, result::Error> {
     self.check_as(true)
   }
 
@@ -37,7 +37,7 @@ impl Todo {
   }
 
   /// Check or uncheck the Todo
-  fn check_as(&mut self, value: bool) -> Result<bool, result::Error> {
+  fn check_as(&self, value: bool) -> Result<bool, result::Error> {
     let target = todos::table.filter(todos::id.eq(&self.id));
     let updated = diesel::update(target)
       .set(todos::checked.eq(value))

@@ -4,10 +4,11 @@ use crate::diesel::ExpressionMethods;
 use crate::diesel::QueryDsl;
 use crate::diesel::RunQueryDsl;
 use crate::models;
-use crate::schema::todos;
 use crate::schema::users;
+use crate::virtual_schema::users_todos;
 use bcrypt;
 use diesel::result;
+use diesel::sql_query;
 use std::{error::Error, fmt};
 
 /// Main user model that will be used for interaction with users
@@ -49,31 +50,45 @@ impl User {
 pub struct UserWithTodo {
   pub id: String,
   pub email: String,
-  password: String,
-  // todos: Vec<models::todo::Todo>,
+  todos: Vec<models::todo::Todo>,
+}
+
+/// Temporary struct for incoming data from the join sql query
+#[derive(QueryableByName, PartialEq, Debug)]
+#[table_name = "users_todos"]
+struct TempUserWithTodo {
+  id: String,
+  email: String,
+  content: String,
+  checked: bool,
+  user_id: String,
 }
 
 impl UserWithTodo {
-  /// Get tulp with user as the first item and second item Option enum
+  /// Get user struct with todos included
   pub fn show(id: &str) -> Result<Self, result::Error> {
-    // let join = users::table.inner_join(todos::table);
+    let results = sql_query(format!(include_str!("../../sql/user_with_todos.sql"), id))
+      .load::<TempUserWithTodo>(&db::establish_connection())?;
 
-    // let mut results = join
-    //   .filter(users::id.eq(&id))
-    //   .load::<(User, Vec<models::todo::Todo>)>(&db::establish_connection())?;
+    let mut user = match results.first() {
+      Some(item) => UserWithTodo {
+        id: String::from(&item.user_id),
+        email: String::from(&item.email),
+        todos: vec![],
+      },
+      _ => return Err(result::Error::NotFound),
+    };
 
-    // match results.pop() {
-    //   Some(result) => Ok(result),
-    //   _ => Err(result::Error::NotFound),
-    // }
-    let mut results = users::table
-      .filter(users::id.eq(&id))
-      .load::<Self>(&db::establish_connection())?;
-
-    match results.pop() {
-      Some(user) => Ok(user),
-      _ => Err(result::Error::NotFound),
+    for todo in results.iter() {
+      user.todos.push(models::todo::Todo {
+        id: String::from(&todo.id),
+        user_id: String::from(&todo.user_id),
+        content: String::from(&todo.content),
+        checked: todo.checked,
+      });
     }
+
+    Ok(user)
   }
 }
 
