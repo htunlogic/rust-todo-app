@@ -22,8 +22,8 @@ async fn main() -> std::io::Result<()> {
     HttpServer::new(|| {
         App::new()
             .route("/", web::get().to(sanity_check))
-            .route("/register", web::post().to(routes::auth::register))
-            .route("/login", web::post().to(routes::auth::login))
+            .route("/register", web::post().to(routes::auth::register::handle))
+            .route("/login", web::post().to(routes::auth::login::handle))
     })
     .bind("127.0.0.1:8080")?
     .run()
