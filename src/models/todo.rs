@@ -1,11 +1,12 @@
 use super::super::db;
 use super::super::schema::todos;
+use super::Paginated;
 use crate::diesel::ExpressionMethods;
 use crate::diesel::QueryDsl;
 use crate::diesel::RunQueryDsl;
 use diesel::result;
 
-#[derive(Queryable, PartialEq, Debug)]
+#[derive(Queryable, PartialEq, Debug, serde::Serialize)]
 pub struct Todo {
   pub id: String,
   pub user_id: String,
@@ -14,9 +15,51 @@ pub struct Todo {
 }
 
 impl Todo {
-  /// Get all todos
-  pub fn all() -> Result<Vec<Todo>, result::Error> {
-    todos::table.load::<Todo>(&db::establish_connection())
+  /// Get paginated todos for user
+  pub fn paginated(
+    page: u32,
+    per_page: u32,
+    user_id: String,
+    checked: bool,
+  ) -> Result<Paginated<Todo>, result::Error> {
+    let mut last_page = 1;
+    let mut data: Vec<Todo> = vec![];
+
+    let connection = db::establish_connection();
+
+    let total = todos::table
+      .filter(todos::user_id.eq(&user_id))
+      .filter(todos::checked.eq(&checked))
+      .count()
+      .get_result(&db::establish_connection());
+
+    let total = match total {
+      Ok(count) => count,
+      Err(e) => {
+        println!("Todos: Counting error: {:?}", e);
+        0
+      }
+    };
+
+    if total > 0 {
+      last_page = total as u32 / per_page;
+      let skip = (page - 1) * per_page;
+
+      data = todos::table
+        .filter(todos::user_id.eq(user_id))
+        .filter(todos::checked.eq(checked))
+        .offset(skip as i64)
+        .limit(per_page.clone() as i64)
+        .load::<Todo>(&connection)?;
+    }
+
+    Ok(Paginated {
+      page: page,
+      per_page: per_page,
+      total: total as u32,
+      last_page,
+      data,
+    })
   }
 
   /// Get todos for single user
