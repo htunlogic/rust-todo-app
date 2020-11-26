@@ -45,6 +45,7 @@ pub async fn handle(
     None => false,
   };
 
+  println!("{:?}", req);
   let user_id: String = req.match_info().get("user_id").unwrap().parse().unwrap();
 
   match Todo::paginated(page, per_page, user_id, checked) {

@@ -17,7 +17,7 @@ use actix_web::{web, HttpResponse, Responder};
 /// Error: 400 or 401
 pub async fn handle(user: web::Json<AuthenticableUser>) -> impl Responder {
   match AuthenticableUser::authenticate(&user.email, &user.password) {
-    Ok(authenticated) => HttpResponse::Ok().json(authenticated),
+    Ok((authenticated, token)) => HttpResponse::Ok().header("jwt", token).json(authenticated),
     Err(_) => HttpResponse::Unauthorized().finish(),
   }
 }

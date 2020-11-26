@@ -1,4 +1,3 @@
-#[macro_use]
 use crate::db;
 use crate::diesel::ExpressionMethods;
 use crate::diesel::QueryDsl;
@@ -55,6 +54,20 @@ impl User {
   /// Add todo for selected user
   pub fn add_todo(&self, todo_content: &str) -> Result<models::todo::Todo, result::Error> {
     models::todo::NewTodo::create(&self.id, &todo_content)
+  }
+
+  /// Generate authentication JWT token
+  pub fn generate_jwt(&self) -> String {
+    crate::services::jwt::generate(&self)
+  }
+
+  /// Convert decoded claims from JWT token into an User object
+  pub fn from_jwt(claims: &crate::services::jwt::Claims) -> Self {
+    User {
+      id: String::from(&claims.sub),
+      email: String::from(&claims.email),
+      password: String::new(),
+    }
   }
 }
 
@@ -130,7 +143,10 @@ pub struct AuthenticableUser {
 
 impl AuthenticableUser {
   /// Try to authenticate the user with given email and password
-  pub fn authenticate<'b>(email: &'b str, password: &'b str) -> Result<User, AuthenticationError> {
+  pub fn authenticate<'b>(
+    email: &'b str,
+    password: &'b str,
+  ) -> Result<(User, String), AuthenticationError> {
     let user = match users::table
       .filter(users::email.eq(&email))
       .load::<User>(&db::establish_connection())
@@ -154,7 +170,8 @@ impl AuthenticableUser {
     match bcrypt::verify(&password, &user.password) {
       Ok(res) => {
         if res == true {
-          Ok(user)
+          let token = user.generate_jwt();
+          Ok((user, token))
         } else {
           println!("Authentication: bcrypt verify error for: {}", &user.email);
           Err(AuthenticationError)
