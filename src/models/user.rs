@@ -14,7 +14,7 @@ use std::{error::Error, fmt};
 /// Main user model that will be used for interaction with users
 /// in the database. All the interaction methods should be attached
 /// to this model.
-#[derive(Queryable, PartialEq, Debug)]
+#[derive(Queryable, PartialEq, Debug, Clone)]
 pub struct User {
   pub id: String,
   pub email: String,

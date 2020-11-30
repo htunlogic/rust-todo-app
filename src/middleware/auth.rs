@@ -1,10 +1,11 @@
+use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
+use crate::models::user::AuthenticableUser;
 use actix_service::{Service, Transform};
-use actix_web::{dev::ServiceRequest, dev::ServiceResponse, web, Error, HttpMessage};
+use actix_web::{dev::ServiceRequest, dev::ServiceResponse, Error, HttpMessage};
 use futures::future::{ok, Ready};
-use futures::Future;
 
 pub struct LoggedGuard;
 
@@ -47,8 +48,6 @@ where
     match is_logged(&req) {
       Ok(auth) => {
         println!("authenticated user: {:?}", auth);
-
-        req.extensions_mut().insert(auth);
 
         let fut = self.service.call(req);
         Box::pin(async move {
@@ -113,5 +112,34 @@ fn bearer_auth(data: &str) -> Result<crate::models::user::User, String> {
 
 /// Handle basic auth authentication token
 fn basic_auth(data: &str) -> Result<crate::models::user::User, String> {
-  Err(String::from("No basic auth enabled"))
+  let decoded = match base64::decode(data) {
+    Ok(d) => match std::str::from_utf8(&d[..]) {
+      Ok(s) => String::from(s),
+      Err(_) => {
+        return Err(String::from("Could not parse the authentication header"));
+      }
+    },
+    Err(_) => return Err(String::from("Could not decode base64 header")),
+  };
+
+  let mut decoded = decoded.split(":");
+
+  let email = match decoded.next() {
+    Some(v) => v,
+    None => "",
+  };
+
+  let password = match decoded.next() {
+    Some(v) => v,
+    None => "",
+  };
+
+  match AuthenticableUser::authenticate(&email, &password) {
+    Ok((user, _)) => Ok(user),
+    Err(e) => {
+      println!("Basic auth error: {:?}", e);
+
+      Err(String::from("Invalid credentials for basic auth"))
+    }
+  }
 }
