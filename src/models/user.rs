@@ -1,6 +1,4 @@
 use crate::db;
-use crate::diesel::ExpressionMethods;
-use crate::diesel::QueryDsl;
 use crate::diesel::RunQueryDsl;
 use crate::models;
 use crate::schema::users;
@@ -9,7 +7,6 @@ use bcrypt;
 use diesel::result;
 use diesel::sql_query;
 use serde::ser::SerializeStruct;
-use std::{error::Error, fmt};
 
 /// Main user model that will be used for interaction with users
 /// in the database. All the interaction methods should be attached
@@ -18,7 +15,7 @@ use std::{error::Error, fmt};
 pub struct User {
   pub id: String,
   pub email: String,
-  password: String,
+  pub password: String,
 }
 
 impl serde::Serialize for User {
@@ -37,18 +34,6 @@ impl User {
   /// Get all users out of the db
   pub fn all() -> Result<Vec<Self>, result::Error> {
     users::table.load::<Self>(&db::establish_connection())
-  }
-
-  /// Get single user out of the database
-  pub fn show(id: &str) -> Result<Self, result::Error> {
-    let mut results = users::table
-      .filter(users::id.eq(&id))
-      .load::<Self>(&db::establish_connection())?;
-
-    match results.pop() {
-      Some(user) => Ok(user),
-      _ => Err(result::Error::NotFound),
-    }
   }
 
   /// Add todo for selected user
@@ -72,7 +57,7 @@ impl User {
 }
 
 /// User model that implements method to retrieve user with his todos together
-#[derive(Queryable, PartialEq, Debug)]
+#[derive(Queryable, PartialEq, Debug, serde::Serialize)]
 pub struct UserWithTodo {
   pub id: String,
   pub email: String,
@@ -115,76 +100,6 @@ impl UserWithTodo {
     }
 
     Ok(user)
-  }
-}
-
-/// Error that will let us know we have authentication issue, either
-/// with email or the password. Error itself won't be specific about it.
-#[derive(Debug)]
-pub struct AuthenticationError;
-
-impl Error for AuthenticationError {
-  fn description(&self) -> &str {
-    "Unauthorized"
-  }
-}
-
-impl fmt::Display for AuthenticationError {
-  fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-    write!(f, "Unauthorized")
-  }
-}
-
-#[derive(Queryable, PartialEq, Debug, serde::Deserialize)]
-pub struct AuthenticableUser {
-  pub email: String,
-  pub password: String,
-}
-
-impl AuthenticableUser {
-  /// Try to authenticate the user with given email and password
-  pub fn authenticate<'b>(
-    email: &'b str,
-    password: &'b str,
-  ) -> Result<(User, String), AuthenticationError> {
-    let user = match users::table
-      .filter(users::email.eq(&email))
-      .load::<User>(&db::establish_connection())
-    {
-      Ok(mut results) => match results.pop() {
-        Some(item) => item,
-        _ => {
-          println!("Authentication: No user found with email: {}", &email);
-          return Err(AuthenticationError);
-        }
-      },
-      Err(e) => {
-        println!(
-          "Authentication: Something went wrong with getting the user out of db: {:?}",
-          e
-        );
-        return Err(AuthenticationError);
-      }
-    };
-
-    match bcrypt::verify(&password, &user.password) {
-      Ok(res) => {
-        if res == true {
-          let token = user.generate_jwt();
-          Ok((user, token))
-        } else {
-          println!("Authentication: bcrypt verify error for: {}", &user.email);
-          Err(AuthenticationError)
-        }
-      }
-      Err(e) => {
-        println!(
-          "Authentication: bcrypt verify error: {}, for: {}",
-          e, &user.email
-        );
-        Err(AuthenticationError)
-      }
-    }
   }
 }
 

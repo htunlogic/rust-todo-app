@@ -1,15 +1,10 @@
-use crate::models::todo::NewTodo;
 use crate::models::user::User;
+use crate::models::user::UserWithTodo;
 use actix_web::{web, HttpResponse, Responder};
 
-#[derive(serde::Deserialize)]
-pub struct NewTodoRequest {
-  content: Option<String>,
-}
-
-/// Create new todo
+/// Uncheck the todo
 ///
-/// @param {String} [content]
+/// @param {String} todo_id
 ///
 /// Success code 200:
 /// ```
@@ -22,19 +17,14 @@ pub struct NewTodoRequest {
 /// ```
 ///
 /// Error: 400
-pub async fn handle(req: web::HttpRequest, data: web::Json<NewTodoRequest>) -> impl Responder {
+pub async fn handle(req: web::HttpRequest) -> impl Responder {
   let auth = match req.extensions_mut().remove::<User>() {
     Some(user) => user,
     None => return HttpResponse::BadRequest().finish(),
   };
 
-  let content: String = match &data.content {
-    Some(c) => c.into(),
-    None => "".into(),
-  };
-
-  match NewTodo::create(&auth.id, &content) {
-    Ok(todo) => HttpResponse::Ok().json(todo),
+  match UserWithTodo::show(&auth.id) {
+    Ok(user) => HttpResponse::Ok().json(user),
     Err(_) => HttpResponse::BadRequest().finish(),
   }
 }

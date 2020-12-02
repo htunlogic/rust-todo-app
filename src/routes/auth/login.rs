@@ -1,4 +1,4 @@
-use crate::models::user::AuthenticableUser;
+use crate::models::auth::AuthenticableUser;
 use actix_web::{web, HttpResponse, Responder};
 
 /// Authenticate the user with email and password

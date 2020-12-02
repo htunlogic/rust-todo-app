@@ -62,6 +62,18 @@ impl Todo {
     })
   }
 
+  /// Get single todo out of the database
+  pub fn show(id: &str) -> Result<Self, result::Error> {
+    let mut results = todos::table
+      .filter(todos::id.eq(&id))
+      .load::<Self>(&db::establish_connection())?;
+
+    match results.pop() {
+      Some(todo) => Ok(todo),
+      _ => Err(result::Error::NotFound),
+    }
+  }
+
   /// Get todos for single user
   pub fn users(user_id: &str) -> Result<Vec<Todo>, result::Error> {
     todos::table
@@ -75,7 +87,7 @@ impl Todo {
   }
 
   // Remove done check for the todo
-  pub fn uncheck(&mut self) -> Result<bool, result::Error> {
+  pub fn uncheck(&self) -> Result<bool, result::Error> {
     self.check_as(false)
   }
 

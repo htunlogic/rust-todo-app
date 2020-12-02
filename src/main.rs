@@ -30,8 +30,24 @@ fn cors() -> Cors {
 
 fn scoped_todos(cfg: &mut web::ServiceConfig) {
     cfg.service(
-        web::resource("/todos/{user_id}")
+        web::resource("/todos")
+            .route(web::post().to(routes::todos::store::handle))
             .route(web::get().to(routes::todos::index::handle))
+            .wrap(middleware::auth::LoggedGuard),
+    );
+    cfg.service(
+        web::resource("/todos/{todo_id}/check")
+            .route(web::post().to(routes::todos::check::handle))
+            .wrap(middleware::auth::LoggedGuard),
+    );
+    cfg.service(
+        web::resource("/todos/{todo_id}/uncheck")
+            .route(web::post().to(routes::todos::uncheck::handle))
+            .wrap(middleware::auth::LoggedGuard),
+    );
+    cfg.service(
+        web::resource("/self")
+            .route(web::post().to(routes::users::index::handle))
             .wrap(middleware::auth::LoggedGuard),
     );
 }

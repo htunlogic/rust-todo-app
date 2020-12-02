@@ -2,7 +2,7 @@ use std::future::Future;
 use std::pin::Pin;
 use std::task::{Context, Poll};
 
-use crate::models::user::AuthenticableUser;
+use crate::models::auth::AuthenticableUser;
 use actix_service::{Service, Transform};
 use actix_web::{dev::ServiceRequest, dev::ServiceResponse, Error, HttpMessage};
 use futures::future::{ok, Ready};
@@ -47,8 +47,7 @@ where
   fn call(&mut self, req: ServiceRequest) -> Self::Future {
     match is_logged(&req) {
       Ok(auth) => {
-        println!("authenticated user: {:?}", auth);
-
+        req.extensions_mut().insert(auth);
         let fut = self.service.call(req);
         Box::pin(async move {
           let res = fut.await?;
@@ -70,7 +69,7 @@ where
 
 /// Check if the user making the request is logged in
 fn is_logged(req: &ServiceRequest) -> Result<crate::models::user::User, String> {
-  let header = match &req.headers().get("authentication") {
+  let header = match &req.headers().get("Authorization") {
     Some(head) => match head.to_str().ok() {
       Some(val) => val.to_string(),
       None => return Err(String::from("Couldn't parse the header")),
@@ -81,8 +80,6 @@ fn is_logged(req: &ServiceRequest) -> Result<crate::models::user::User, String> 
   let mut split = header.split_whitespace();
 
   let auth_type = split.next();
-
-  println!("{:?}", auth_type);
 
   if Some("Bearer") == auth_type {
     bearer_auth(match split.next() {
@@ -95,7 +92,7 @@ fn is_logged(req: &ServiceRequest) -> Result<crate::models::user::User, String> 
       None => "",
     })
   } else {
-    Err(String::from("Not valid authentcation method"))
+    Err(String::from("Not valid authentication method"))
   }
 }
 

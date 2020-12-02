@@ -6,7 +6,7 @@ pub struct Claims {
   pub sub: String,
   pub email: String,
   pub exp: i64,
-  pub created: i64,
+  pub iat: i64,
 }
 
 /// Generate JWT for passed User
@@ -28,7 +28,7 @@ pub fn generate(user: &crate::models::user::User) -> String {
     sub: String::from(&user.id),
     email: String::from(&user.email),
     exp: exp.timestamp(),
-    created: Utc::now().timestamp(),
+    iat: Utc::now().timestamp(),
   };
 
   jsonwebtoken::encode(

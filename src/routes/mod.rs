@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod todos;
+pub mod users;
 
 use actix_web::{HttpResponse, Responder};
 
