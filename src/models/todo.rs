@@ -1,4 +1,3 @@
-use super::super::db;
 use super::super::schema::todos;
 use super::Paginated;
 use crate::diesel::ExpressionMethods;
@@ -17,6 +16,7 @@ pub struct Todo {
 impl Todo {
   /// Get paginated todos for user
   pub fn paginated(
+    connection: &crate::diesel::PgConnection,
     page: u32,
     per_page: u32,
     user_id: String,
@@ -25,13 +25,11 @@ impl Todo {
     let mut last_page = 1;
     let mut data: Vec<Todo> = vec![];
 
-    let connection = db::establish_connection();
-
     let total = todos::table
       .filter(todos::user_id.eq(&user_id))
       .filter(todos::checked.eq(&checked))
       .count()
-      .get_result(&db::establish_connection());
+      .get_result(connection);
 
     let total = match total {
       Ok(count) => count,
@@ -50,7 +48,7 @@ impl Todo {
         .filter(todos::checked.eq(checked))
         .offset(skip as i64)
         .limit(per_page.clone() as i64)
-        .load::<Todo>(&connection)?;
+        .load::<Todo>(connection)?;
     }
 
     Ok(Paginated {
@@ -63,10 +61,10 @@ impl Todo {
   }
 
   /// Get single todo out of the database
-  pub fn show(id: &str) -> Result<Self, result::Error> {
+  pub fn show(connection: &crate::diesel::PgConnection, id: &str) -> Result<Self, result::Error> {
     let mut results = todos::table
       .filter(todos::id.eq(&id))
-      .load::<Self>(&db::establish_connection())?;
+      .load::<Self>(connection)?;
 
     match results.pop() {
       Some(todo) => Ok(todo),
@@ -75,28 +73,35 @@ impl Todo {
   }
 
   /// Get todos for single user
-  pub fn users(user_id: &str) -> Result<Vec<Todo>, result::Error> {
+  pub fn users(
+    connection: &crate::diesel::PgConnection,
+    user_id: &str,
+  ) -> Result<Vec<Todo>, result::Error> {
     todos::table
       .filter(todos::user_id.eq(&user_id))
-      .load::<Todo>(&db::establish_connection())
+      .load::<Todo>(connection)
   }
 
   // Check the todo as done
-  pub fn check(&self) -> Result<bool, result::Error> {
-    self.check_as(true)
+  pub fn check(&self, connection: &crate::diesel::PgConnection) -> Result<bool, result::Error> {
+    self.check_as(connection, true)
   }
 
   // Remove done check for the todo
-  pub fn uncheck(&self) -> Result<bool, result::Error> {
-    self.check_as(false)
+  pub fn uncheck(&self, connection: &crate::diesel::PgConnection) -> Result<bool, result::Error> {
+    self.check_as(connection, false)
   }
 
   /// Check or uncheck the Todo
-  fn check_as(&self, value: bool) -> Result<bool, result::Error> {
+  fn check_as(
+    &self,
+    connection: &crate::diesel::PgConnection,
+    value: bool,
+  ) -> Result<bool, result::Error> {
     let target = todos::table.filter(todos::id.eq(&self.id));
     let updated = diesel::update(target)
       .set(todos::checked.eq(value))
-      .execute(&db::establish_connection())?;
+      .execute(connection)?;
 
     if updated <= 0 {
       Err(result::Error::NotFound)
@@ -115,7 +120,11 @@ pub struct NewTodo {
 
 impl NewTodo {
   /// Create new todo with given parameters.
-  pub fn create<'a>(user_id: &'a str, content: &'a str) -> Result<Todo, result::Error> {
+  pub fn create<'a>(
+    connection: &crate::diesel::PgConnection,
+    user_id: &'a str,
+    content: &'a str,
+  ) -> Result<Todo, result::Error> {
     let values = Self {
       content: String::from(content),
       user_id: String::from(user_id),
@@ -123,6 +132,6 @@ impl NewTodo {
 
     diesel::insert_into(todos::table)
       .values(&values)
-      .get_result::<Todo>(&db::establish_connection())
+      .get_result::<Todo>(connection)
   }
 }

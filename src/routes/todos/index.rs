@@ -1,5 +1,6 @@
 use crate::models::todo::Todo;
 use crate::models::user::User;
+use crate::state::app::AppState;
 use actix_web::{web, HttpResponse, Responder};
 
 #[derive(serde::Deserialize)]
@@ -30,6 +31,7 @@ pub struct PaginatedTodoRequest {
 pub async fn handle(
   req: web::HttpRequest,
   query: web::Query<PaginatedTodoRequest>,
+  state: web::Data<AppState>,
 ) -> impl Responder {
   let auth = match req.extensions_mut().remove::<User>() {
     Some(user) => user,
@@ -51,7 +53,7 @@ pub async fn handle(
     None => false,
   };
 
-  match Todo::paginated(page, per_page, auth.id, checked) {
+  match Todo::paginated(&state.get_connection(), page, per_page, auth.id, checked) {
     Ok(paginated) => HttpResponse::Ok().json(paginated),
     Err(_) => HttpResponse::BadRequest().finish(),
   }

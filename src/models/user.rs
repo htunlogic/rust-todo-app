@@ -1,4 +1,3 @@
-use crate::db;
 use crate::diesel::RunQueryDsl;
 use crate::models;
 use crate::schema::users;
@@ -32,13 +31,17 @@ impl serde::Serialize for User {
 
 impl User {
   /// Get all users out of the db
-  pub fn all() -> Result<Vec<Self>, result::Error> {
-    users::table.load::<Self>(&db::establish_connection())
+  pub fn all(connection: &crate::diesel::PgConnection) -> Result<Vec<Self>, result::Error> {
+    users::table.load::<Self>(connection)
   }
 
   /// Add todo for selected user
-  pub fn add_todo(&self, todo_content: &str) -> Result<models::todo::Todo, result::Error> {
-    models::todo::NewTodo::create(&self.id, &todo_content)
+  pub fn add_todo(
+    &self,
+    connection: &crate::diesel::PgConnection,
+    todo_content: &str,
+  ) -> Result<models::todo::Todo, result::Error> {
+    models::todo::NewTodo::create(connection, &self.id, &todo_content)
   }
 
   /// Generate authentication JWT token
@@ -77,9 +80,9 @@ struct TempUserWithTodo {
 
 impl UserWithTodo {
   /// Get user struct with todos included
-  pub fn show(id: &str) -> Result<Self, result::Error> {
+  pub fn show(connection: &crate::diesel::PgConnection, id: &str) -> Result<Self, result::Error> {
     let results = sql_query(format!(include_str!("../../sql/user_with_todos.sql"), id))
-      .load::<TempUserWithTodo>(&db::establish_connection())?;
+      .load::<TempUserWithTodo>(connection)?;
 
     let mut user = match results.first() {
       Some(item) => UserWithTodo {
@@ -115,7 +118,11 @@ pub struct NewUser {
 impl NewUser {
   /// Create new user with email and password
   /// password will be automatically hashed into bcrypt.
-  pub fn create<'a>(email: &'a str, password: &'a str) -> Result<User, result::Error> {
+  pub fn create<'a>(
+    connection: &crate::diesel::PgConnection,
+    email: &'a str,
+    password: &'a str,
+  ) -> Result<User, result::Error> {
     let hashed_password = match bcrypt::hash(&password, bcrypt::DEFAULT_COST) {
       Ok(hashed) => hashed,
       Err(e) => {
@@ -131,6 +138,6 @@ impl NewUser {
 
     diesel::insert_into(users::table)
       .values(&values)
-      .get_result::<User>(&db::establish_connection())
+      .get_result::<User>(connection)
   }
 }

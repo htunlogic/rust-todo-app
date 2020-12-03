@@ -1,4 +1,5 @@
 use crate::models::user::NewUser;
+use crate::state::app::AppState;
 use actix_web::{web, HttpResponse, Responder};
 
 /// Register new user with email and password
@@ -15,8 +16,8 @@ use actix_web::{web, HttpResponse, Responder};
 /// ```
 ///
 /// Error: 400
-pub async fn handle(user: web::Json<NewUser>) -> impl Responder {
-  match NewUser::create(&user.email, &user.password) {
+pub async fn handle(user: web::Json<NewUser>, state: web::Data<AppState>) -> impl Responder {
+  match NewUser::create(&state.get_connection(), &user.email, &user.password) {
     Ok(created) => HttpResponse::Ok().json(created),
     Err(_) => HttpResponse::Ok().body("Error"),
   }

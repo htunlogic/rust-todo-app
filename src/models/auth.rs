@@ -1,5 +1,4 @@
 use super::user::User;
-use crate::db;
 use crate::diesel::ExpressionMethods;
 use crate::diesel::QueryDsl;
 use crate::diesel::RunQueryDsl;
@@ -15,12 +14,13 @@ pub struct AuthenticableUser {
 impl AuthenticableUser {
   /// Try to authenticate the user with given email and password
   pub fn authenticate<'b>(
+    connection: &crate::diesel::PgConnection,
     email: &'b str,
     password: &'b str,
   ) -> Result<(User, String), AuthenticationError> {
     let user = match users::table
       .filter(users::email.eq(&email))
-      .load::<User>(&db::establish_connection())
+      .load::<User>(connection)
     {
       Ok(mut results) => match results.pop() {
         Some(item) => item,

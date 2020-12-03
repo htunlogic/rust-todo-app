@@ -3,17 +3,19 @@ extern crate diesel;
 extern crate bcrypt;
 extern crate dotenv;
 extern crate jsonwebtoken;
+extern crate r2d2;
+extern crate r2d2_diesel;
 
 use actix_cors::Cors;
 use actix_web::{http, middleware as actix_middleware, web, App, HttpServer};
 use env_logger::Env;
 
-mod db;
 mod middleware;
 mod models;
 mod routes;
 mod schema;
 mod services;
+mod state;
 mod virtual_schema;
 
 pub const DEFAULT_PER_PAGE: u32 = 15;
@@ -57,6 +59,7 @@ async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     HttpServer::new(|| {
         App::new()
+            .data(crate::state::app::initialize())
             // Logging middleware
             .wrap(actix_middleware::Logger::default())
             .wrap(actix_middleware::Logger::new(

@@ -3,10 +3,10 @@ use std::pin::Pin;
 use std::task::{Context, Poll};
 
 use crate::models::auth::AuthenticableUser;
+use crate::state::app::AppState;
 use actix_service::{Service, Transform};
 use actix_web::{dev::ServiceRequest, dev::ServiceResponse, Error, HttpMessage};
 use futures::future::{ok, Ready};
-
 pub struct LoggedGuard;
 
 impl<S> Transform<S> for LoggedGuard
@@ -87,10 +87,13 @@ fn is_logged(req: &ServiceRequest) -> Result<crate::models::user::User, String> 
       None => "",
     })
   } else if Some("Basic") == auth_type {
-    basic_auth(match split.next() {
-      Some(v) => v,
-      None => "",
-    })
+    basic_auth(
+      match split.next() {
+        Some(v) => v,
+        None => "",
+      },
+      req,
+    )
   } else {
     Err(String::from("Not valid authentication method"))
   }
@@ -108,7 +111,7 @@ fn bearer_auth(data: &str) -> Result<crate::models::user::User, String> {
 }
 
 /// Handle basic auth authentication token
-fn basic_auth(data: &str) -> Result<crate::models::user::User, String> {
+fn basic_auth(data: &str, req: &ServiceRequest) -> Result<crate::models::user::User, String> {
   let decoded = match base64::decode(data) {
     Ok(d) => match std::str::from_utf8(&d[..]) {
       Ok(s) => String::from(s),
@@ -131,7 +134,10 @@ fn basic_auth(data: &str) -> Result<crate::models::user::User, String> {
     None => "",
   };
 
-  match AuthenticableUser::authenticate(&email, &password) {
+  // We will try to get app state here and unwrap it, in case the app data does not exist
+  // we want to panic, there is no recovery from it missing.
+  let state = req.app_data::<AppState>().unwrap();
+  match AuthenticableUser::authenticate(&state.get_connection(), &email, &password) {
     Ok((user, _)) => Ok(user),
     Err(e) => {
       println!("Basic auth error: {:?}", e);

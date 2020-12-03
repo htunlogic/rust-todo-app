@@ -1,5 +1,6 @@
 use crate::models::todo::Todo;
 use crate::models::user::User;
+use crate::state::app::AppState;
 use actix_web::{web, HttpResponse, Responder};
 
 /// Check the todo
@@ -17,13 +18,18 @@ use actix_web::{web, HttpResponse, Responder};
 /// ```
 ///
 /// Error: 400
-pub async fn handle(req: web::HttpRequest, path: web::Path<String>) -> impl Responder {
+pub async fn handle(
+  req: web::HttpRequest,
+  path: web::Path<String>,
+  state: web::Data<AppState>,
+) -> impl Responder {
+  let connection = state.get_connection();
   let auth = match req.extensions_mut().remove::<User>() {
     Some(user) => user,
     None => return HttpResponse::BadRequest().finish(),
   };
 
-  let mut todo = match Todo::show(&path.0) {
+  let mut todo = match Todo::show(&connection, &path.0) {
     Ok(todo) => todo,
     Err(_) => return HttpResponse::NotFound().finish(),
   };
@@ -33,7 +39,7 @@ pub async fn handle(req: web::HttpRequest, path: web::Path<String>) -> impl Resp
     return HttpResponse::Forbidden().finish();
   }
 
-  match todo.check() {
+  match todo.check(&connection) {
     Ok(_) => {
       todo.checked = true;
       HttpResponse::Ok().json(todo)

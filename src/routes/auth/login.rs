@@ -1,4 +1,5 @@
 use crate::models::auth::AuthenticableUser;
+use crate::state::app::AppState;
 use actix_web::{web, HttpResponse, Responder};
 
 /// Authenticate the user with email and password
@@ -15,8 +16,11 @@ use actix_web::{web, HttpResponse, Responder};
 /// ```
 ///
 /// Error: 400 or 401
-pub async fn handle(user: web::Json<AuthenticableUser>) -> impl Responder {
-  match AuthenticableUser::authenticate(&user.email, &user.password) {
+pub async fn handle(
+  user: web::Json<AuthenticableUser>,
+  state: web::Data<AppState>,
+) -> impl Responder {
+  match AuthenticableUser::authenticate(&state.get_connection(), &user.email, &user.password) {
     Ok((authenticated, token)) => HttpResponse::Ok().header("jwt", token).json(authenticated),
     Err(_) => HttpResponse::Unauthorized().finish(),
   }
