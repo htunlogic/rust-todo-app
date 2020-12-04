@@ -6,6 +6,7 @@ use bcrypt;
 use diesel::result;
 use diesel::sql_query;
 use serde::ser::SerializeStruct;
+use uuid::Uuid;
 
 /// Main user model that will be used for interaction with users
 /// in the database. All the interaction methods should be attached
@@ -30,6 +31,15 @@ impl serde::Serialize for User {
 }
 
 impl User {
+  /// Create new user
+  pub fn new(email: String, hashed_password: String) -> User {
+    User {
+      id: Uuid::new_v4().to_string(),
+      email,
+      password: hashed_password,
+    }
+  }
+
   /// Get all users out of the db
   pub fn all(connection: &crate::diesel::PgConnection) -> Result<Vec<Self>, result::Error> {
     users::table.load::<Self>(connection)

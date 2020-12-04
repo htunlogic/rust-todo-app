@@ -38,11 +38,19 @@ impl AuthenticableUser {
       }
     };
 
+    AuthenticableUser::verify(password.into(), &user)?;
+
+    let token = user.generate_jwt();
+
+    Ok((user, token))
+  }
+
+  /// Verify the bcrypt password
+  fn verify(password: String, user: &User) -> Result<(), AuthenticationError> {
     match bcrypt::verify(&password, &user.password) {
       Ok(res) => {
         if res == true {
-          let token = user.generate_jwt();
-          Ok((user, token))
+          Ok(())
         } else {
           println!("Authentication: bcrypt verify error for: {}", &user.email);
           Err(AuthenticationError)
@@ -73,5 +81,27 @@ impl Error for AuthenticationError {
 impl fmt::Display for AuthenticationError {
   fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
     write!(f, "Unauthorized")
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use crate::models::user::User;
+  #[test]
+  fn verify_user_password_authentication() {
+    let password: String = "123".into();
+    let hashed_password = match crate::bcrypt::hash(&password, bcrypt::DEFAULT_COST) {
+      Ok(hashed) => hashed,
+      Err(e) => panic!(e),
+    };
+
+    let user = User::new("test@test.com".into(), hashed_password);
+
+    let response = match super::AuthenticableUser::verify(password, &user) {
+      Ok(r) => r,
+      Err(e) => panic!(e),
+    };
+
+    assert_eq!((), response);
   }
 }

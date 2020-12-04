@@ -54,3 +54,24 @@ pub fn verify(token: String) -> Result<crate::models::user::User, jsonwebtoken::
 
   Ok(crate::models::user::User::from_jwt(&token_data.claims))
 }
+
+#[cfg(test)]
+mod tests {
+  use super::{generate, verify};
+  use crate::models::user::User;
+  #[test]
+  fn generate_and_verify_jwt_token() {
+    let user = User {
+      id: "123".into(),
+      email: "test@test.com".into(),
+      password: "".into(),
+    };
+    let token = generate(&user.clone());
+    let verify = match verify(token) {
+      Ok(user) => user.id,
+      Err(e) => panic!(e),
+    };
+
+    assert_eq!(verify, user.id);
+  }
+}

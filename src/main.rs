@@ -10,13 +10,13 @@ use actix_cors::Cors;
 use actix_web::{http, middleware as actix_middleware, web, App, HttpServer};
 use env_logger::Env;
 
-mod middleware;
-mod models;
-mod routes;
-mod schema;
-mod services;
-mod state;
-mod virtual_schema;
+pub mod middleware;
+pub mod models;
+pub mod routes;
+pub mod schema;
+pub mod services;
+pub mod state;
+pub mod virtual_schema;
 
 pub const DEFAULT_PER_PAGE: u32 = 15;
 
@@ -71,11 +71,6 @@ async fn main() -> std::io::Result<()> {
             // Authentication routes
             .route("/register", web::post().to(routes::auth::register::handle))
             .route("/login", web::post().to(routes::auth::login::handle))
-            // Todo routes
-            // .route(
-            //     "/todos/{user_id}",
-            //     web::get().to(routes::todos::index::handle),
-            // )
             .service(web::scope("/").configure(scoped_todos))
     })
     .bind("127.0.0.1:8080")?
