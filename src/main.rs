@@ -16,6 +16,7 @@ pub mod routes;
 pub mod schema;
 pub mod services;
 pub mod state;
+pub mod validation;
 pub mod virtual_schema;
 
 pub const DEFAULT_PER_PAGE: u32 = 15;
@@ -59,14 +60,17 @@ async fn main() -> std::io::Result<()> {
     env_logger::Builder::from_env(Env::default().default_filter_or("info")).init();
     HttpServer::new(|| {
         App::new()
+            // Init application state
             .data(crate::state::app::initialize())
-            // Logging middleware
+            // Init setup of application request validators
+            .app_data(crate::validation::new_todo_request::app_data())
+            .app_data(crate::validation::new_user_request::app_data())
+            // Logging setup
             .wrap(actix_middleware::Logger::default())
             .wrap(actix_middleware::Logger::new(
                 "%a %t '%r' %s %b '%{Referer}i' '%{User-Agent}i' %T",
             ))
             .wrap(cors())
-            // Sanity check route that should always work
             .route("/", web::get().to(routes::sanity_check))
             // Authentication routes
             .route("/register", web::post().to(routes::auth::register::handle))

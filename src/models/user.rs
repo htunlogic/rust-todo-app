@@ -1,3 +1,5 @@
+use crate::diesel::ExpressionMethods;
+use crate::diesel::QueryDsl;
 use crate::diesel::RunQueryDsl;
 use crate::models;
 use crate::schema::users;
@@ -43,6 +45,20 @@ impl User {
   /// Get all users out of the db
   pub fn all(connection: &crate::diesel::PgConnection) -> Result<Vec<Self>, result::Error> {
     users::table.load::<Self>(connection)
+  }
+
+  /// Find single user by its email
+  pub fn find_by_email(
+    connection: &crate::diesel::PgConnection,
+    email: &str,
+  ) -> Result<Option<User>, result::Error> {
+    match users::table
+      .filter(users::email.eq(email))
+      .load::<User>(connection)
+    {
+      Ok(mut results) => Ok(results.pop()),
+      Err(e) => Err(e),
+    }
   }
 
   /// Add todo for selected user

@@ -1,16 +1,13 @@
 use crate::models::todo::NewTodo;
 use crate::models::user::User;
 use crate::state::app::AppState;
+use crate::validation::new_todo_request::NewTodoRequest;
 use actix_web::{web, HttpResponse, Responder};
-
-#[derive(serde::Deserialize)]
-pub struct NewTodoRequest {
-  content: Option<String>,
-}
+use actix_web_validator::Json;
 
 /// Create new todo
 ///
-/// @param {String} [content]
+/// @param {String} content
 ///
 /// Success code 200:
 /// ```
@@ -25,7 +22,7 @@ pub struct NewTodoRequest {
 /// Error: 400
 pub async fn handle(
   req: web::HttpRequest,
-  data: web::Json<NewTodoRequest>,
+  data: Json<NewTodoRequest>,
   state: web::Data<AppState>,
 ) -> impl Responder {
   let auth = match req.extensions_mut().remove::<User>() {
