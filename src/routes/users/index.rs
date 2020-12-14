@@ -3,17 +3,21 @@ use crate::models::user::UserWithTodo;
 use crate::state::app::AppState;
 use actix_web::{web, HttpResponse, Responder};
 
-/// Uncheck the todo
-///
-/// @param {String} todo_id
+/// Get yourself
 ///
 /// Success code 200:
 /// ```
 /// {
-///   "id": "06b8ff8c-3e34-4226-b917-cb07bd98785e",
-///   "user_id": "c4d5f3b2-5149-489e-b103-f9e3b8adc3ff",
-///   "content": "Do something",
-///   "checked": false
+///   "id": "be24fb8b-09ca-472c-abef-4ae04c530cfd",
+///   "email": "test@barrage.net",
+///   "todos": [
+///     {
+///       "id": "06b8ff8c-3e34-4226-b917-cb07bd98785e",
+///       "user_id": "c4d5f3b2-5149-489e-b103-f9e3b8adc3ff",
+///       "content": "Do something",
+///       "checked": true
+///     }
+///   ]
 /// }
 /// ```
 ///
