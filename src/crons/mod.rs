@@ -19,7 +19,7 @@ pub fn run_crons() {
   dotenv().ok();
   let activate_cron = env::var("CRON_ACTIVE").unwrap_or("false".into());
   if activate_cron == String::from("true") {
-    println!("Starting cron runner in its own thread...");
+    println!("Starting cron runner.");
     Runner::new().add(Box::new(ExampleJob)).run();
   }
 }

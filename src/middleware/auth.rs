@@ -59,7 +59,7 @@ where
         Box::pin(async move {
           Ok(ServiceResponse::new(
             req.into_parts().0,
-            actix_web::HttpResponse::Unauthorized().finish(),
+            actix_web::HttpResponse::Unauthorized().body(e),
           ))
         })
       }
